@@ -1,7 +1,7 @@
 {
   "name": "autotest-github-action",
   "description": "GitHub Actions CI-CD pipeline integration with Testingwhiz",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Cygnet.One",
   "type": "module",
   "keywords": [
