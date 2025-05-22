@@ -31,7 +31,7 @@ jobs:
             exit 1
           fi
           echo "✅ ReportTemplate folder exists and is not empty."
-          
+
       - name: Setup Node.js
         id: setup-node
         uses: actions/setup-node@v4
