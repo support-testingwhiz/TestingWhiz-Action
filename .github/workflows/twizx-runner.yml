@@ -1,0 +1,19 @@
+name: TestingWhiz Action
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-action:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run TWIZX File
+        uses: ./
+        with:
+          server-url: 'http://localhost:5050/'
+          report-file-path: 'C:/Users/dhananjay.sharma/.whiz/reports'
+          report-interval: '3000'
+          file-path: 'C:/Users/dhananjay.sharma/.whiz/temp/basic_element.twizx'

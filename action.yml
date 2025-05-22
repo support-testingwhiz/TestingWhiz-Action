@@ -1,0 +1,139 @@
+name: autotest-github-action
+description: GitHub Actions CI-CD pipeline integration with Testingwhiz
+author: Cygnet.One
+
+# Add your action's branding here. This will appear on the GitHub Marketplace.
+branding:
+  icon: heart
+  color: red
+
+# Define your inputs here.
+inputs:
+  server-url:
+    description:
+      'URL of the TestingWhiz server in the format http://host:port/.'
+    required: true
+  base-url:
+    description: 'TestingWhiz BASEURL (http://www... or https://www...)'
+    required: false
+  target-type:
+    description: 'Target script source: filePath or folderPath'
+    required: false
+    default: 'filePath'
+  file-path:
+    description: 'Path of the TestingWhiz automation script file'
+    required: false
+  folder-path:
+    description: 'Path of the TestingWhiz automation script Folder'
+    required: false
+  test-case:
+    description: 'Testcase name to run'
+    required: false
+  autohealing-enabled:
+    description: 'Enable auto-healing'
+    required: false
+    default: 'false'
+  report-file-path:
+    description: 'Path to save the TestingWhiz Report'
+    required: true
+  report-prefix:
+    description: 'Prefix for report file name'
+    required: false
+  report-frequency:
+    description: 'Trigger report generation at % completion'
+    required: false
+    default: '10'
+  zip-report-format:
+    description: 'Convert report to ZIP'
+    required: false
+    default: 'false'
+  pdf-report-format:
+    description: 'Convert report to PDF'
+    required: false
+    default: 'false'
+  browser:
+    description: 'Browser to run test (for self-hosted agent)'
+    required: false
+    default: 'Google Chrome'
+  step-execution-interval:
+    description: 'Interval between test steps (ms)'
+    required: false
+  report-interval:
+    description: 'Time interval to prepare report file (ms)'
+    required: true
+  pass-fail-per:
+    description: 'Approved passing percentage'
+    required: false
+    default: '0'
+  capture-failure-screenshot:
+    description: 'Capture screenshot on failed step'
+    required: false
+    default: 'false'
+  capture-condition-failure-screenshot:
+    description: 'Capture screenshot when condition fails'
+    required: false
+    default: 'false'
+  mail-report:
+    description: 'Send report via email'
+    required: false
+    default: 'false'
+  report-format:
+    description: 'Format to send in mail (Zip or Pdf)'
+    required: false
+    default: 'Zip'
+  rbt-priority-high:
+    description: 'Execute High priority test cases'
+    required: false
+    default: 'false'
+  rbt-priority-medium:
+    description: 'Execute Medium priority test cases'
+    required: false
+    default: 'false'
+  rbt-priority-low:
+    description: 'Execute Low priority test cases'
+    required: false
+    default: 'false'
+  label-base-executions:
+    description: 'Enable label-based test execution'
+    required: false
+    default: 'false'
+  txt-label-executions:
+    description: 'Comma-separated label executions'
+    required: false
+  to-address:
+    description: 'Comma-separated TO email addresses'
+    required: false
+  cc-address:
+    description: 'Comma-separated CC email addresses'
+    required: false
+  bcc-address:
+    description: 'Comma-separated BCC email addresses'
+    required: false
+  form-address:
+    description: 'Comma-separated FROM email addresses'
+    required: false
+  mail-subject:
+    description: 'Email subject'
+    required: false
+  mail-body:
+    description: 'Email body'
+    required: false
+  attachment:
+    description: 'Attachment absolute path'
+    required: false
+  smtp-server:
+    description: 'SMTP server'
+    required: false
+  smtp-port:
+    description: 'SMTP port'
+    required: false
+  smtp-username:
+    description: 'SMTP username'
+    required: false
+  smtp-password:
+    description: 'SMTP password'
+    required: false
+
+runs:
+  using: node20
+  main: dist/index.js
