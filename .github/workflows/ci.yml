@@ -2,6 +2,10 @@ name: Continuous Integration
 
 on:
   push:
+    branches:
+      - 'release*'
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -16,6 +20,18 @@ jobs:
         id: checkout
         uses: actions/checkout@v4
 
+      - name: Validate ReportTemplate folder exists and is not empty
+        run: |
+          if [ ! -d "ReportTemplate" ]; then
+            echo "❌ ReportTemplate folder does not exist in the root directory."
+            exit 1
+          fi
+          if [ -z "$(ls -A ReportTemplate)" ]; then
+            echo "❌ ReportTemplate folder is empty."
+            exit 1
+          fi
+          echo "✅ ReportTemplate folder exists and is not empty."
+          
       - name: Setup Node.js
         id: setup-node
         uses: actions/setup-node@v4

@@ -29,6 +29,9 @@ set -e
 #
 # script/release
 
+# Move to repo root directory
+cd "$(dirname "$0")"/..
+
 # Variables
 semver_tag_regex='v[0-9]+\.[0-9]+\.[0-9]+$'
 semver_tag_glob='v[0-9].[0-9].[0-9]*'
@@ -44,20 +47,43 @@ BOLD_PURPLE='\033[1;35m'
 BOLD_UNDERLINED='\033[1;4m'
 BOLD='\033[1m'
 
-# 1. Retrieve the latest release tag
+# 1. Check for uncommitted changes in working tree
+if ! git diff-index --quiet HEAD --; then
+    echo -e "${BOLD_RED}Warning:${OFF} You have uncommitted changes in your working directory."
+    echo -e "${BOLD_RED}Uncommitted files:${OFF}"
+    git status --short
+    echo -e -n "${BOLD_PURPLE}Proceed anyway? [y/${BOLD_UNDERLINED}n${OFF}]: "
+    read -r proceed_anyway
+    if [[ ! ($proceed_anyway == "y" || $proceed_anyway == "Y") ]]; then
+        echo -e "${BOLD_RED}Aborted:${OFF} Release cancelled by user due to uncommitted changes."
+        exit 1
+    fi
+fi
+
+# 2. Retrieve the latest release tag
 if ! latest_tag=$(git describe --abbrev=0 --match="$semver_tag_glob"); then
 	# There are no existing release tags
 	echo -e "No tags found (yet) - Continue to create and push your first tag"
 	latest_tag="[unknown]"
 fi
 
-# 2. Display the latest release tag
+# 3. Display the latest release tag
 echo -e "The latest release tag is: ${BOLD_BLUE}${latest_tag}${OFF}"
 
-# 3. Prompt the user for a new release tag
-read -r -p 'Enter a new release tag (vX.X.X format): ' new_tag
+# 4. Read version from package.json
+pkg_version=$(node -p "require('./package.json').version")
+new_tag="v$pkg_version"
+echo -e "Version from package.json: ${BOLD_BLUE}${new_tag}${OFF}"
 
-# 4. Validate the new release tag
+# 5. Ask for user confirmation
+echo -e -n "Confirm release version is correct and ready to tag: ${BOLD_BLUE}${new_tag}${OFF} [Y/${BOLD_UNDERLINED}n${OFF}]: "
+read -r confirm_version
+if [[ ! ($confirm_version == "y" || $confirm_version == "Y") ]]; then
+    echo -e "${BOLD_RED}Aborted:${OFF} Release cancelled by user"
+    exit 1
+fi
+
+# 6. Validate the new release tag
 if echo "$new_tag" | grep -q -E "$semver_tag_regex"; then
 	# Release tag is valid
 	echo -e "Tag: ${BOLD_BLUE}$new_tag${OFF} is valid syntax"
@@ -67,21 +93,46 @@ else
 	exit 1
 fi
 
-# 5. Remind user to update the version field in package.json
-echo -e -n "Make sure the version field in package.json is ${BOLD_BLUE}$new_tag${OFF}. Yes? [Y/${BOLD_UNDERLINED}n${OFF}] "
-read -r YN
-
-if [[ ! ($YN == "y" || $YN == "Y") ]]; then
-	# Package.json version field is not up to date
-	echo -e "Please update the package.json version to ${BOLD_PURPLE}$new_tag${OFF} and commit your changes"
-	exit 1
+# 7. Check if tag already exists
+if git rev-parse "$new_tag" >/dev/null 2>&1; then
+    echo -e "${BOLD_RED}Error:${OFF} Tag ${BOLD_BLUE}$new_tag${OFF} already exists"
+    exit 1
 fi
 
-# 6. Tag a new release
+# 8. Check if package.json is committed
+if git diff --quiet --exit-code ./package.json; then
+  echo -e "✅ ${BOLD_GREEN}package.json is committed${OFF}"
+else
+  echo -e "❌ ${BOLD_RED}package.json has uncommitted changes!${OFF}"
+  echo -e "Please commit the version change in package.json before tagging."
+  exit 1
+fi
+
+# 9. Ensure new version is greater than the latest tag
+latest_version=$(echo "${latest_tag#v}" | tr -d '[:space:]')
+new_version=$(echo "${new_tag#v}" | tr -d '[:space:]')
+
+version_gt() {
+    [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$1" ] && [ "$1" != "$2" ]
+}
+
+if ! version_gt "$latest_version" "$new_version"; then
+    echo -e "${BOLD_RED}Warning:${OFF} New version ${BOLD_BLUE}v$new_version${OFF} is not greater than latest tag ${BOLD_BLUE}$latest_tag${OFF}"
+    echo -e -n "${BOLD_PURPLE}Proceed anyway? [y/${BOLD_UNDERLINED}n${OFF}]: "
+    read -r proceed_with_lower_version
+    if [[ ! ($proceed_with_lower_version == "y" || $proceed_with_lower_version == "Y") ]]; then
+        echo -e "${BOLD_RED}Aborted:${OFF} Release cancelled due to non-incremented version."
+        exit 1
+    fi
+else
+    echo -e "✔ ${BOLD_GREEN}New version is valid and incremented${OFF}"
+fi
+
+# 10. Tag a new release
 git tag "$new_tag" --annotate --message "$new_tag Release"
 echo -e "Tagged: ${BOLD_GREEN}$new_tag${OFF}"
 
-# 7. Set 'is_major_release' variable
+# 11. Set 'is_major_release' variable
 new_major_release_tag=$(expr "$new_tag" : "$major_semver_tag_regex")
 
 if [[ "$latest_tag" = "[unknown]" ]]; then
@@ -98,7 +149,7 @@ else
 	fi
 fi
 
-# 8. Point separate major release tag (e.g. v1, v2) to the new release
+# 12. Point separate major release tag (e.g. v1, v2) to the new release
 if [ $is_major_release = 'yes' ]; then
 	# Create a new major version tag and point it to this release
 	git tag "$new_major_release_tag" --annotate --message "$new_major_release_tag Release"
@@ -109,7 +160,7 @@ else
 	echo -e "Synced ${BOLD_GREEN}$latest_major_release_tag${OFF} with ${BOLD_GREEN}$new_tag${OFF}"
 fi
 
-# 9. Push the new tags (with commits, if any) to remote
+# 13. Push the new tags (with commits, if any) to remote
 git push --follow-tags
 
 if [ $is_major_release = 'yes' ]; then
@@ -121,7 +172,7 @@ else
 	echo -e "Tags: ${BOLD_GREEN}$latest_major_release_tag${OFF} and ${BOLD_GREEN}$new_tag${OFF} pushed to remote"
 fi
 
-# 10. If this is a major release, create a 'releases/v#' branch and push
+# 14. If this is a major release, create a 'releases/v#' branch and push
 if [ $is_major_release = 'yes' ]; then
 	git branch "releases/$new_major_release_tag" "$new_major_release_tag"
 	echo -e "Branch: ${BOLD_BLUE}releases/$new_major_release_tag${OFF} created from ${BOLD_BLUE}$new_major_release_tag${OFF} tag"
@@ -130,4 +181,4 @@ if [ $is_major_release = 'yes' ]; then
 fi
 
 # Completed
-echo -e "${BOLD_GREEN}Done!${OFF}"
+echo -e "${BOLD_GREEN}✅ Done!${OFF}"
